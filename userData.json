@@ -1,0 +1,154 @@
+{
+  "6285721829539@s.whatsapp.net": {
+    "level": 1,
+    "money": 11.999999999970882,
+    "lastWork": "2025-03-30T06:34:21.138Z",
+    "missedDays": 0,
+    "job": "Petugas Kebersihan",
+    "absenDate": "Mon Mar 31 2025",
+    "absenCount": 3,
+    "dailyEarnings": 40,
+    "exp": 40,
+    "assets": {
+      "Ethereum": 50000,
+      "Dogecoin": 900630000,
+      "Bitcoin": 141022
+    }
+  },
+  "6281952686012@s.whatsapp.net": {
+    "level": 1,
+    "money": 0,
+    "lastWork": "2025-03-30T06:44:44.890Z",
+    "missedDays": 0,
+    "job": "Kurir",
+    "absenDate": "Mon Mar 31 2025",
+    "absenCount": 3,
+    "dailyEarnings": 45,
+    "exp": 50
+  },
+  "6282181369571@s.whatsapp.net": {
+    "level": 1,
+    "exp": 60,
+    "money": 5000090,
+    "lastWork": null,
+    "missedDays": 0,
+    "job": "Kurir",
+    "absenDate": "Mon Mar 31 2025",
+    "absenCount": 3,
+    "dailyEarnings": 45
+  },
+  "6285773649235@s.whatsapp.net": {
+    "level": 1,
+    "exp": 30,
+    "money": 4.13000007040975,
+    "job": "Tukang Sampah",
+    "lastWork": null,
+    "missedDays": 0,
+    "assets": {
+      "Bitcoin": 70939844
+    },
+    "absenDate": "Mon Mar 31 2025",
+    "absenCount": 3,
+    "dailyEarnings": 45
+  },
+  "6287837586562@s.whatsapp.net": {
+    "level": 1,
+    "exp": 10,
+    "money": 410,
+    "job": "Tukang Sampah",
+    "lastWork": null,
+    "missedDays": 0,
+    "absenDate": "Sun Mar 30 2025",
+    "absenCount": 1,
+    "dailyEarnings": 10
+  },
+  "6288999111919@s.whatsapp.net": {
+    "level": 1,
+    "exp": 0,
+    "money": 509600200,
+    "job": null,
+    "lastWork": null,
+    "missedDays": 0
+  },
+  "62895607564446@s.whatsapp.net": {
+    "level": 1,
+    "exp": 0,
+    "money": 32.89999999999998,
+    "job": null,
+    "lastWork": null,
+    "missedDays": 0,
+    "assets": {
+      "Bitcoin": 34,
+      "Dogecoin": 240
+    }
+  },
+  "6285781615881@s.whatsapp.net": {
+    "level": 1,
+    "exp": 30,
+    "money": 3846.769999999997,
+    "job": "Kurir",
+    "lastWork": null,
+    "missedDays": 0,
+    "absenDate": "Mon Mar 31 2025",
+    "absenCount": 3,
+    "dailyEarnings": 45,
+    "assets": {
+      "Dogecoin": 21000,
+      "Litecoin": 110000,
+      "Bitcoin": 100,
+      "Ethereum": 10000
+    }
+  },
+  "6281585939267@s.whatsapp.net": {
+    "level": 1,
+    "exp": 0,
+    "money": 3600,
+    "job": null,
+    "lastWork": null,
+    "missedDays": 0
+  },
+  "6285811456988@s.whatsapp.net": {
+    "level": 1,
+    "exp": 30,
+    "money": 0,
+    "job": "Petugas Kebersihan",
+    "lastWork": null,
+    "missedDays": 0,
+    "absenDate": "Mon Mar 31 2025",
+    "absenCount": 3,
+    "dailyEarnings": 45
+  },
+  "6289667362223@s.whatsapp.net": {
+    "level": 1,
+    "exp": 30,
+    "money": 3000,
+    "job": "Kurir",
+    "lastWork": null,
+    "missedDays": 0,
+    "absenDate": "Mon Mar 31 2025",
+    "absenCount": 3,
+    "dailyEarnings": 45
+  },
+  "6281390385721@s.whatsapp.net": {
+    "level": 1,
+    "exp": 10,
+    "money": 15,
+    "job": "Kurir",
+    "lastWork": null,
+    "missedDays": 0,
+    "absenDate": "Mon Mar 31 2025",
+    "absenCount": 1,
+    "dailyEarnings": 15
+  },
+  "62882001684643@s.whatsapp.net": {
+    "level": 1,
+    "exp": 30,
+    "money": 45,
+    "job": "Kurir",
+    "lastWork": null,
+    "missedDays": 0,
+    "absenDate": "Mon Mar 31 2025",
+    "absenCount": 3,
+    "dailyEarnings": 45
+  }
+}
