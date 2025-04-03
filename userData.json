@@ -1,30 +1,26 @@
 {
   "6285721829539@s.whatsapp.net": {
-    "level": 1,
-    "money": 11.999999999970882,
+    "level": 2,
+    "money": 895128535786608.1,
     "lastWork": "2025-03-30T06:34:21.138Z",
     "missedDays": 0,
-    "job": "Petugas Kebersihan",
-    "absenDate": "Mon Mar 31 2025",
-    "absenCount": 3,
-    "dailyEarnings": 40,
-    "exp": 40,
-    "assets": {
-      "Ethereum": 50000,
-      "Dogecoin": 900630000,
-      "Bitcoin": 141022
-    }
+    "job": "Asisten Kantor",
+    "absenDate": "Thu Apr 03 2025",
+    "absenCount": 2,
+    "dailyEarnings": 25,
+    "exp": 10,
+    "assets": {}
   },
   "6281952686012@s.whatsapp.net": {
     "level": 1,
-    "money": 0,
+    "money": 45,
     "lastWork": "2025-03-30T06:44:44.890Z",
     "missedDays": 0,
     "job": "Kurir",
-    "absenDate": "Mon Mar 31 2025",
+    "absenDate": "Thu Apr 03 2025",
     "absenCount": 3,
     "dailyEarnings": 45,
-    "exp": 50
+    "exp": 80
   },
   "6282181369571@s.whatsapp.net": {
     "level": 1,
@@ -40,13 +36,11 @@
   "6285773649235@s.whatsapp.net": {
     "level": 1,
     "exp": 30,
-    "money": 4.13000007040975,
+    "money": 26967967.840000097,
     "job": "Tukang Sampah",
     "lastWork": null,
     "missedDays": 0,
-    "assets": {
-      "Bitcoin": 70939844
-    },
+    "assets": {},
     "absenDate": "Mon Mar 31 2025",
     "absenCount": 3,
     "dailyEarnings": 45
@@ -73,7 +67,7 @@
   "62895607564446@s.whatsapp.net": {
     "level": 1,
     "exp": 0,
-    "money": 32.89999999999998,
+    "money": 10132.9,
     "job": null,
     "lastWork": null,
     "missedDays": 0,
@@ -131,14 +125,17 @@
   },
   "6281390385721@s.whatsapp.net": {
     "level": 1,
-    "exp": 10,
-    "money": 15,
+    "exp": 70,
+    "money": 61.95,
     "job": "Kurir",
     "lastWork": null,
     "missedDays": 0,
-    "absenDate": "Mon Mar 31 2025",
-    "absenCount": 1,
-    "dailyEarnings": 15
+    "absenDate": "Thu Apr 03 2025",
+    "absenCount": 3,
+    "dailyEarnings": 45,
+    "assets": {
+      "Ethereum": 5
+    }
   },
   "62882001684643@s.whatsapp.net": {
     "level": 1,

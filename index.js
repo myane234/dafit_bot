@@ -9,12 +9,23 @@ const { exec } = require('child_process');
 const MAX_MONEY = 1000000000; // Batas maksimum uang ($1 miliar)
 const assetDataFile = 'assets.json';
 
+const game = {
+    roomActive: false,
+    players: {}, // Menyimpan ID pemain
+    werewolf: null,
+    seer: null,
+    villager: [],
+    night: false,
+    votes: {},
+    timer: null // Timer untuk fase permainan
+};
+
 let assets = [
-    { name: "Dogecoin", price: 6 },
-    { name: "Bitcoin", price: 90 },
-    { name: "Emas", price: 30 },
-    { name: "Ethereum", price: 50 },
-    { name: "Litecoin", price: 25 }
+    { name: "Dogecoin", price: 6, previousPrice: 25  },
+    { name: "Bitcoin", price: 90, previousPrice: 90 },
+    { name: "Emas", price: 30, previousPrice: 30 },
+    { name: "Ethereum", price: 50, previousPrice: 50 },
+    { name: "Litecoin", price: 25, previousPrice: 25 },
 ];
 
 
@@ -51,6 +62,7 @@ function updateAssetPrices() {
         const changePercent = (Math.random() * 10 - 5) / 100; // Perubahan harga antara -5% hingga +5%
         const oldPrice = asset.price;
         const newPrice = Math.max(0.01, oldPrice + oldPrice * changePercent);
+        asset.previousPrice = asset.price; // Simpan harga sebelumnya
         asset.price = parseFloat(newPrice.toFixed(2)); // Batasi 2 desimal
     }
     console.log("📈 Harga aset diperbarui:", assets);
@@ -682,20 +694,29 @@ if (body.startsWith("!togel")) {
     const randomNumber = Math.floor(Math.random() * 10000).toString().padStart(4, "0"); // 4 digit angka acak
     console.log(`🎲 Angka yang diundi: ${randomNumber}`);
 
-    // cek togel
-    let winnings = 0;
-    if (chosenNumber === randomNumber) {
-        winnings = betAmount * 100; // 4 digit cocok
-    } else if (randomNumber.endsWith(chosenNumber)) {
-        if (chosenNumber.length === 3) {
-            winnings = betAmount * 50; // 3 digit cocok
-        } else if (chosenNumber.length === 2) {
-            winnings = betAmount * 10; // 2 digit cocok
-        } else if (chosenNumber.length === 1) {
-            winnings = betAmount * 5; // 1 digit cocok
+    // Hitung jumlah digit yang cocok tanpa memperhatikan urutan
+    let matchCount = 0;
+    let tempRandom = randomNumber; // Salinan untuk menghindari double count
+    for (let digit of chosenNumber) {
+        if (tempRandom.includes(digit)) {
+            matchCount++;
+            tempRandom = tempRandom.replace(digit, ""); // Hindari hitungan ganda
         }
     }
 
+    // Hitung kemenangan berdasarkan jumlah kecocokan digit
+    let winnings = 0;
+    if (matchCount === 4) {
+        winnings = betAmount * 100;
+    } else if (matchCount === 3) {
+        winnings = betAmount * 50;
+    } else if (matchCount === 2) {
+        winnings = betAmount * 10;
+    } else if (matchCount === 1) {
+        winnings = betAmount * 5;
+    }
+
+    // Menampilkan hasil kepada pemain
     if (winnings > 0) {
         user.money += winnings;
         await sock.sendMessage(from, { text: `🎉 Selamat! Angka yang diundi: ${randomNumber}. Anda menang $${winnings}. Total uang Anda: $${user.money}.` });
@@ -707,7 +728,7 @@ if (body.startsWith("!togel")) {
     saveUserData();
     return;
 }
-  
+
 if (body.startsWith("!topup")) {
     const senderId = msg.key.participant || msg.key.remoteJid;
 
@@ -781,13 +802,14 @@ if (body.startsWith("!harga")) {
     await sock.sendMessage(from, { text: priceList });
     return;
 }
+
 if (body.startsWith("!beli")) {
     const senderId = msg.key.participant || msg.key.remoteJid;
 
     if (!userData[senderId]) {
         await sock.sendMessage(from, { text: "❌ Anda belum memiliki akun. Gunakan perintah !create untuk membuat akun." });
         return;
-    } 
+    }
 
     const args = body.split(" ");
     if (args.length < 3) {
@@ -796,35 +818,51 @@ if (body.startsWith("!beli")) {
     }
 
     const assetIndex = parseInt(args[1]) - 1;
-    const amount = parseInt(args[2]);
+    const amount = args[2];
 
-    if (isNaN(assetIndex) || assetIndex < 0 || assetIndex >= assets.length) {
-        await sock.sendMessage(from, { text: "❌ Nomor aset tidak valid. Gunakan perintah !harga untuk melihat daftar aset." });
+    const user = userData[senderId];
+    
+    if (amount.toLowerCase() === "all") {
+        // Jika memilih 'all', beli sebanyak yang bisa dibeli dengan seluruh uang
+        const asset = assets[assetIndex];
+        const totalAmount = Math.floor(user.money / asset.price); // Hitung jumlah aset yang bisa dibeli
+        if (totalAmount === 0) {
+            await sock.sendMessage(from, { text: `❌ Uang Anda tidak cukup untuk membeli ${asset.name}.` });
+            return;
+        }
+
+        user.money -= totalAmount * asset.price;
+        user.assets = user.assets || {};
+        user.assets[asset.name] = (user.assets[asset.name] || 0) + totalAmount;
+
+        saveUserData();
+        await sock.sendMessage(from, { text: `✅ Anda berhasil membeli ${totalAmount} ${asset.name} dengan seluruh uang Anda.` });
         return;
     }
 
-    if (isNaN(amount) || amount <= 0) {
+    const amountParsed = parseInt(amount);
+    if (isNaN(amountParsed) || amountParsed <= 0) {
         await sock.sendMessage(from, { text: "❌ Jumlah harus berupa angka positif." });
         return;
     }
 
     const asset = assets[assetIndex];
-    const user = userData[senderId];
-    const totalCost = asset.price * amount;
+    const totalCost = asset.price * amountParsed;
 
     if (user.money < totalCost) {
         await sock.sendMessage(from, { text: `❌ Uang Anda tidak cukup! Total biaya: $${totalCost}. Uang Anda: $${user.money}.` });
         return;
     }
-    
+
     user.money -= totalCost;
     user.assets = user.assets || {};
-    user.assets[asset.name] = (user.assets[asset.name] || 0) + amount;
+    user.assets[asset.name] = (user.assets[asset.name] || 0) + amountParsed;
 
     saveUserData();
-    await sock.sendMessage(from, { text: `✅ Anda berhasil membeli ${amount} ${asset.name} dengan total biaya $${totalCost}.` });
+    await sock.sendMessage(from, { text: `✅ Anda berhasil membeli ${amountParsed} ${asset.name} dengan total biaya $${totalCost}.` });
     return;
 }
+
 if (body.startsWith("!jual")) {
     const senderId = msg.key.participant || msg.key.remoteJid;
 
@@ -840,37 +878,395 @@ if (body.startsWith("!jual")) {
     }
 
     const assetIndex = parseInt(args[1]) - 1;
-    const amount = parseInt(args[2]);
+    const amount = args[2];
 
-    if (isNaN(assetIndex) || assetIndex < 0 || assetIndex >= assets.length) {
-        await sock.sendMessage(from, { text: "❌ Nomor aset tidak valid. Gunakan perintah !harga untuk melihat daftar aset." });
+    const user = userData[senderId];
+
+    if (amount.toLowerCase() === "all") {
+        // Jika memilih 'all', jual semua aset yang dimiliki
+        const asset = assets[assetIndex];
+        if (!user.assets || !user.assets[asset.name]) {
+            await sock.sendMessage(from, { text: `❌ Anda tidak memiliki ${asset.name} untuk dijual.` });
+            return;
+        }
+
+        const totalAmount = user.assets[asset.name]; // Ambil semua aset yang dimiliki
+        const totalEarnings = asset.price * totalAmount;
+
+        // Kurangi aset pengguna dan tambah uang
+        delete user.assets[asset.name];
+        user.money += totalEarnings;
+
+        saveUserData();
+        await sock.sendMessage(from, { text: `✅ Anda berhasil menjual ${totalAmount} ${asset.name} dan mendapatkan $${totalEarnings}.` });
         return;
     }
 
-    if (isNaN(amount) || amount <= 0) {
+    const amountParsed = parseInt(amount);
+    if (isNaN(amountParsed) || amountParsed <= 0) {
         await sock.sendMessage(from, { text: "❌ Jumlah harus berupa angka positif." });
         return;
     }
 
     const asset = assets[assetIndex];
-    const user = userData[senderId];
-    if (!user.assets || !user.assets[asset.name] || user.assets[asset.name] < amount) {
+    if (!user.assets || !user.assets[asset.name] || user.assets[asset.name] < amountParsed) {
         await sock.sendMessage(from, { text: `❌ Anda tidak memiliki cukup ${asset.name} untuk dijual.` });
         return;
     }
 
-    const totalEarnings = asset.price * amount;
+    const totalEarnings = asset.price * amountParsed;
 
-    // Kurangi aset pengguna n add asset
-    user.assets[asset.name] -= amount;
+    // Kurangi aset pengguna dan tambah uang
+    user.assets[asset.name] -= amountParsed;
     if (user.assets[asset.name] === 0) delete user.assets[asset.name];
     user.money += totalEarnings;
 
     saveUserData();
-    await sock.sendMessage(from, { text: `✅ Anda berhasil menjual ${amount} ${asset.name} dan mendapatkan $${totalEarnings}.` });
+    await sock.sendMessage(from, { text: `✅ Anda berhasil menjual ${amountParsed} ${asset.name} dan mendapatkan $${totalEarnings}.` });
     return;
 }
-           
+
+// Werewolf Game Functions (keep these at the top with other game functions)
+// Werewolf Game Functions
+const game = {
+    roomActive: false,
+    players: {}, // Menyimpan ID pemain dan nama
+    werewolf: null,
+    seer: null,
+    villager: [],
+    night: false,
+    votes: {},
+    timer: null,
+    lastProcessed: {} // Untuk mencegah duplikasi pesan
+};
+
+// Fungsi utilitas
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+// Fungsi game
+async function startRoom(sock, chatId) {
+    if (game.roomActive) {
+        await sock.sendMessage(chatId, { text: "Room sudah aktif! Gunakan !join untuk masuk." });
+        return;
+    }
+    
+    game.roomActive = true;
+    game.players = {};
+    await sock.sendMessage(chatId, { text: "🎮 Room Werewolf dibuat!\nGunakan !join untuk masuk ke game." });
+}
+
+async function joinGame(sock, chatId, userId, pushName) {
+    if (!game.roomActive) {
+        await sock.sendMessage(chatId, { text: "❌ Belum ada room aktif! Gunakan !werewolf untuk membuat room." });
+        return;
+    }
+    
+    if (game.players[userId]) {
+        // Skip jika sudah join untuk hindari duplikasi pesan
+        return;
+    }
+    
+    game.players[userId] = {
+        name: pushName,
+        alive: true
+    };
+    
+    await sock.sendMessage(chatId, { 
+        text: `🎉 ${pushName} telah bergabung ke game!`,
+        mentions: [userId]
+    });
+}
+
+async function startGame(sock, chatId) {
+    const playerIds = Object.keys(game.players);
+    if (playerIds.length < 3) {
+        await sock.sendMessage(chatId, { text: "❌ Minimal 3 pemain untuk memulai game!" });
+        return;
+    }
+
+    // Reset game state
+    game.werewolf = null;
+    game.seer = null;
+    game.villager = [];
+    game.votes = {};
+    
+    shuffle(playerIds);
+    game.werewolf = playerIds[0];
+    game.seer = playerIds[1];
+    game.villager = playerIds.slice(2);
+
+    // Kirim peran ke pemain dengan delay
+    try {
+        await sock.sendMessage(game.werewolf, { 
+            text: "🐺 Anda adalah WEREWOLF!\nGunakan !kill @target untuk membunuh pemain di malam hari." 
+        });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        await sock.sendMessage(game.seer, { 
+            text: "🔮 Anda adalah SEER!\nGunakan !check @target untuk mengecek peran pemain di malam hari." 
+        });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        for (const villagerId of game.villager) {
+            await sock.sendMessage(villagerId, { 
+                text: "👨‍🌾 Anda adalah VILLAGER!\nBantu temukan werewolf dan voting untuk menyingkirkannya di siang hari." 
+            });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        const mentions = playerIds.map(id => `@${game.players[id].name}`).join(" ");
+        await sock.sendMessage(chatId, { 
+            text: `🎮 Game Werewolf dimulai! Pemain:\n${mentions}\n\n🌙 Malam pertama dimulai...`,
+            mentions: playerIds
+        });
+        
+        game.night = true;
+        startNightPhase(sock, chatId);
+    } catch (error) {
+        console.error("Gagal memulai game:", error);
+        await sock.sendMessage(chatId, { text: "❌ Gagal memulai game. Coba lagi." });
+    }
+}
+
+async function startNightPhase(sock, chatId) {
+    game.votes = {}; // Reset votes setiap malam
+    await sock.sendMessage(chatId, { text: "🌙 Malam tiba! Werewolf bangun dan pilih target..." });
+    
+    // Set timeout untuk fase malam (60 detik)
+    game.timer = setTimeout(() => startDayPhase(sock, chatId), 60000);
+}
+
+async function startDayPhase(sock, chatId) {
+    clearTimeout(game.timer);
+    await sock.sendMessage(chatId, { text: "☀️ Siang tiba! Diskusikan dan voting untuk menyingkirkan werewolf..." });
+    game.night = false;
+    
+    // Set timeout untuk fase siang (90 detik)
+    game.timer = setTimeout(() => endDayPhase(sock, chatId), 90000);
+}
+
+async function endDayPhase(sock, chatId) {
+    clearTimeout(game.timer);
+    
+    // Hitung hasil voting
+    let maxVotes = 0;
+    let executedPlayer = null;
+    
+    for (const [playerId, votes] of Object.entries(game.votes)) {
+        if (votes > maxVotes) {
+            maxVotes = votes;
+            executedPlayer = playerId;
+        }
+    }
+    
+    if (executedPlayer) {
+        const playerName = game.players[executedPlayer]?.name || "Unknown";
+        await sock.sendMessage(chatId, { text: `⚰️ ${playerName} telah dihukum mati oleh warga!` });
+        
+        // Hapus pemain yang dihukum
+        delete game.players[executedPlayer];
+        
+        // Cek kondisi kemenangan
+        await checkWinCondition(sock, chatId);
+    } else {
+        await sock.sendMessage(chatId, { text: "Tidak ada pemain yang dihukum hari ini." });
+        startNightPhase(sock, chatId);
+    }
+}
+
+async function killPlayer(sock, chatId, killerId, targetId) {
+    if (!game.night) {
+        await sock.sendMessage(chatId, { text: "❌ Bisa membunuh hanya di malam hari!" });
+        return;
+    }
+    
+    if (game.werewolf !== killerId) {
+        await sock.sendMessage(chatId, { text: "❌ Hanya werewolf yang bisa membunuh!" });
+        return;
+    }
+    
+    if (!game.players[targetId]?.alive) {
+        await sock.sendMessage(chatId, { text: "❌ Target tidak valid atau sudah mati!" });
+        return;
+    }
+    
+    // Tandai pemain sebagai mati
+    game.players[targetId].alive = false;
+    const targetName = game.players[targetId].name;
+    
+    await sock.sendMessage(chatId, { 
+        text: `🩸 ${targetName} telah dibunuh oleh werewolf!`,
+        mentions: [targetId]
+    });
+    
+    // Cek kondisi kemenangan
+    await checkWinCondition(sock, chatId);
+}
+
+async function votePlayer(sock, chatId, voterId, targetId) {
+    if (game.night) {
+        await sock.sendMessage(chatId, { text: "❌ Voting hanya bisa dilakukan di siang hari!" });
+        return;
+    }
+    
+    if (!game.players[voterId]?.alive) {
+        await sock.sendMessage(chatId, { text: "❌ Hanya pemain hidup yang bisa voting!" });
+        return;
+    }
+    
+    if (!game.players[targetId]?.alive) {
+        await sock.sendMessage(chatId, { text: "❌ Tidak bisa memilih pemain yang sudah mati!" });
+        return;
+    }
+    
+    game.votes[targetId] = (game.votes[targetId] || 0) + 1;
+    const voterName = game.players[voterId].name;
+    const targetName = game.players[targetId].name;
+    
+    await sock.sendMessage(chatId, { 
+        text: `🗳 ${voterName} memilih untuk menghukum ${targetName}!`,
+        mentions: [voterId, targetId]
+    });
+}
+
+async function checkPlayerRole(sock, chatId, seerId, targetId) {
+    if (!game.night) {
+        await sock.sendMessage(chatId, { text: "❌ Hanya bisa mengecek peran di malam hari!" });
+        return;
+    }
+    
+    if (game.seer !== seerId) {
+        await sock.sendMessage(chatId, { text: "❌ Hanya seer yang bisa mengecek peran!" });
+        return;
+    }
+    
+    if (!game.players[targetId]) {
+        await sock.sendMessage(chatId, { text: "❌ Target tidak valid!" });
+        return;
+    }
+    
+    let role;
+    if (targetId === game.werewolf) {
+        role = "WEREWOLF";
+    } else if (targetId === game.seer) {
+        role = "SEER";
+    } else {
+        role = "VILLAGER";
+    }
+    
+    await sock.sendMessage(seerId, { 
+        text: `🔮 Hasil pengecekan:\n${game.players[targetId].name} adalah ${role}`
+    });
+}
+
+async function checkWinCondition(sock, chatId) {
+    const alivePlayers = Object.entries(game.players)
+        .filter(([_, player]) => player.alive)
+        .map(([id]) => id);
+    
+    const aliveWerewolf = alivePlayers.includes(game.werewolf);
+    const aliveVillagers = alivePlayers.filter(id => id !== game.werewolf).length;
+    
+    if (!aliveWerewolf) {
+        await sock.sendMessage(chatId, { text: "🎉 PARA VILLAGER MENANG! Werewolf telah dikalahkan!" });
+        await announceRoles(sock, chatId);
+        resetGame();
+        return;
+    }
+    
+    if (aliveVillagers <= 1) {
+        await sock.sendMessage(chatId, { text: "🐺 WEREWOLF MENANG! Hampir semua villager telah mati!" });
+        await announceRoles(sock, chatId);
+        resetGame();
+        return;
+    }
+    
+    // Lanjut ke fase berikutnya
+    if (game.night) {
+        startDayPhase(sock, chatId);
+    } else {
+        startNightPhase(sock, chatId);
+    }
+}
+
+async function announceRoles(sock, chatId) {
+    let roleList = "🔍 Peran Pemain:\n";
+    
+    for (const [id, player] of Object.entries(game.players)) {
+        let role;
+        if (id === game.werewolf) {
+            role = "🐺 WEREWOLF";
+        } else if (id === game.seer) {
+            role = "🔮 SEER";
+        } else {
+            role = "👨‍🌾 VILLAGER";
+        }
+        
+        roleList += `${player.name}: ${role}\n`;
+    }
+    
+    await sock.sendMessage(chatId, { text: roleList });
+}
+
+function resetGame() {
+    game.roomActive = false;
+    game.players = {};
+    game.werewolf = null;
+    game.seer = null;
+    game.villager = [];
+    game.night = false;
+    game.votes = {};
+    clearTimeout(game.timer);
+}
+
+// Dalam message handler utama, tambahkan:
+sock.ev.on('messages.upsert', async ({ messages }) => {
+    try {
+        const msg = messages[0];
+        if (!msg.message) return;
+
+        const chatId = msg.key.remoteJid;
+        const senderId = msg.key.participant || chatId;
+        const body = msg.message.conversation || 
+                    msg.message.extendedTextMessage?.text || "";
+        const isGroup = chatId.endsWith('@g.us');
+        const mentions = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
+
+        // ... (handler perintah lainnya)
+
+        // Handler game Werewolf
+        const command = body.toLowerCase().split(' ')[0];
+        
+        if (command === "!werewolf") {
+            await startRoom(sock, chatId);
+        } 
+        else if (command === "!join") {
+            await joinGame(sock, chatId, senderId, msg.pushName);
+        }
+        else if (command === "!startwolf") {
+            await startGame(sock, chatId);
+        }
+        else if (command === "!kill" && mentions.length > 0) {
+            await killPlayer(sock, chatId, senderId, mentions[0]);
+        }
+        else if (command === "!vote" && mentions.length > 0) {
+            await votePlayer(sock, chatId, senderId, mentions[0]);
+        }
+        else if (command === "!check" && mentions.length > 0) {
+            await checkPlayerRole(sock, chatId, senderId, mentions[0]);
+        }
+
+    } catch (error) {
+        console.error("Error handling message:", error);
+    }
+});
+
+
         } catch (error) {
             console.error("❌ Error di event messages.upsert:", error);
         }
@@ -898,10 +1294,10 @@ if (body.startsWith("!jual")) {
         console.log("📸 Scan QR ini untuk login!");
     });
     
-    setInterval(updateAssetPrices, 3000); // 3 detik
-    setInterval(saveAssetPrices, 3000); //simpan harga 3detik 1x
+    setInterval(updateAssetPrices, 30000); // 3 detik
+    setInterval(saveAssetPrices, 30000); //simpan harga 3detik 1x
 
 }
 
 
-startBot();
+startBot(); 
